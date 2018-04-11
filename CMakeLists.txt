@@ -25,6 +25,9 @@ target_link_libraries(dnn_face_recognition_ex dlib::dlib)
 add_executable(server_http_ex server_http_ex.cpp)
 target_link_libraries(server_http_ex dlib::dlib)
 
+add_executable(face_compare_server face_compare_server.cpp)
+target_link_libraries(face_compare_server dlib::dlib)
+
 # To compile this program all you need to do is ask cmake.  You would type
 # these commands from within the directory containing this CMakeLists.txt
 # file:
