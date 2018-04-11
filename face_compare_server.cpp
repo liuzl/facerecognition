@@ -19,6 +19,21 @@
 using namespace dlib;
 using namespace std;
 
+string c(const string& b)
+{
+    base64 base64_coder;
+    ostringstream sout;
+    istringstream sin(b);
+    base64_coder.decode(sin, sout);
+    return sout.str();
+}
+
+void write_file(const string& name, const string& content)
+{
+    ofstream out(name, ios::binary);
+    out.write(content.c_str(), content.size());
+}
+
 class web_server : public server_http
 {
     const std::string on_request ( 
@@ -26,25 +41,18 @@ class web_server : public server_http
         outgoing_things& outgoing
     )
     {
-        base64 base64_coder;
-
         ostringstream sout;
 
         if (incoming.path == "/api/v1/facecompare")
         {
-            string img1 = incoming.queries["img1"];
-            string img2 = incoming.queries["img2"];
-            ostringstream oss1, oss2;
-            istringstream iss1, iss2 ;
-            iss1.str(img1);
-            base64_coder.decode(iss1, oss1);
-            string name1 = md5(oss1.str());
-
-            iss2.str(img2);
-            base64_coder.decode(iss2, oss2);
-            string name2 = md5(oss2.str());
+            string img1 = c(incoming.queries["img1"]);
+            string img2 = c(incoming.queries["img2"]);
+            string name1 = md5(img1);
+            string name2 = md5(img2);
             sout << "md5(img1)=" << name1 << endl;
             sout << "md5(img2)=" << name2 << endl;
+            write_file(name1, img1);
+            write_file(name2, img2);
         }
         else
         {
