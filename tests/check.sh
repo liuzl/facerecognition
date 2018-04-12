@@ -8,6 +8,6 @@ img2=`base64 -i $2 | tr -d '\n' | xxd -plain | sed 's/\(..\)/%\1/g' `
 
 echo "img1=$img1&img2=$img2" > postdata
 
-curl -d @postdata -H "Content-Type: application/x-www-form-urlencoded" -X POST http://localhost:5000/api/v1/facecompare
+curl -d @postdata -X POST http://localhost:5000/api/v1/facecompare
 rm postdata
 echo ""
