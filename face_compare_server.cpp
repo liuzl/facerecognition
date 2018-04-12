@@ -1,14 +1,3 @@
-// The contents of this file are in the public domain. See LICENSE_FOR_EXAMPLE_PROGRAMS.txt
-/*
-
-    This example illustrates the use of the HTTP extension to the server object 
-    from the dlib C++ Library.
-    It creates a server that always responds with a simple HTML form.
-
-    To view the page this program displays you should go to http://localhost:5000
-
-*/
-
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -19,11 +8,13 @@
 #include <dlib/cmd_line_parser.h>
 #include <dlib/misc_api.h>
 #include <dlib/graph_utils.h>
-
+#include <dlib/logger.h>
 #include "dnn_face_feature.h"
 
 using namespace dlib;
 using namespace std;
+
+logger xlog("facecompare");
 
 string c(const string& b)
 {
@@ -47,6 +38,10 @@ class web_server : public server_http
         outgoing_things& outgoing
     )
     {
+        xlog << LINFO << incoming.foreign_ip << "\t"
+            << incoming.request_type << "\t"
+            << incoming.path;
+
         ostringstream sout;
 
         if (incoming.path == "/api/v1/facecompare")
@@ -119,25 +114,26 @@ private:
 
 int main(int argc, char** argv)
 {
+    xlog.set_level(LALL);
     try
     {
         command_line_parser parser;
         parser.add_option("dir","dir for saving image files.",1);
         parser.add_option("model","dir for dnn face model files.",1);
+        parser.add_option("port","listen port.",1);
         parser.add_option("h","Display this help message.");
 
         parser.parse(argc,argv);
 
         const char* one_time_opts[] = {"dir", "model"};
         parser.check_one_time_options(one_time_opts);
-
+        parser.check_option_arg_range("port", 80, 65535);
         if (parser.option("h"))
         {
             cout << "Usage: " << argv[0] << " --dir dir_path\n";
             parser.print_options();
             return 0;
         }
-
         string dir, model_dir;
         if (parser.option("dir"))
         {
@@ -145,7 +141,7 @@ int main(int argc, char** argv)
         }
         else
         {
-            cout << "Error in command line:\n   You must specify an dir name.\n";
+            cout << "Error in cmd line:\n   You must specify a dir.\n";
             cout << "\nTry the -h option for more information." << endl;
             return 0;
         }
@@ -155,25 +151,21 @@ int main(int argc, char** argv)
         }
         else
         {
-            cout << "Error in command line:\n   You must specify an model dir.\n";
+            cout << "Error in cmd line:\n   You must specify a model dir.\n";
             cout << "\nTry the -h option for more information." << endl;
             return 0;
         }
+        int port = get_option(parser,"port", 5000);
 
-        // create an instance of our web server
         web_server our_web_server(dir, model_dir);
-
-        // make it listen on port 5000
-        our_web_server.set_listening_port(5000);
-        // Tell the server to begin accepting connections.
-        //our_web_server.start_async();
+        our_web_server.set_listening_port(port);
+        xlog << LINFO << "server listen on "
+            << our_web_server.get_listening_ip() << ":" << port;
         our_web_server.start();
-
     }
     catch (exception& e)
     {
         cout << e.what() << endl;
     }
 }
-
 
