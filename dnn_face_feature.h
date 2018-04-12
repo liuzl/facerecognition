@@ -66,7 +66,7 @@ public:
                 "dlib_face_recognition_resnet_model_v1.dat") >> net;
     }
 
-    bool extract(const string& file_name, matrix<float,0,1>& face_descriptor, string& msg);
+    int extract(const string& file_name, matrix<float,0,1>& face_descriptor, string& msg);
 private:
     frontal_face_detector detector;
     shape_predictor sp;
@@ -75,7 +75,7 @@ private:
 
 // ----------------------------------------------------------------------------------------
 
-bool face_feature::extract(const string& file_name,
+int face_feature::extract(const string& file_name,
         matrix<float,0,1>& face_descriptor, string& msg)
 {
     matrix<rgb_pixel> img;
@@ -96,7 +96,7 @@ bool face_feature::extract(const string& file_name,
     {
         oss << "should only contain one face in image, " << faces.size() << " faces found!";
         msg = oss.str();
-        return false;
+        return faces.size();
     }
 
     // This call asks the DNN to convert each face image in faces into a 128D vector.
@@ -114,7 +114,7 @@ bool face_feature::extract(const string& file_name,
     // If you use the model without jittering, as we did when clustering the bald guys, it
     // gets an accuracy of 99.13% on the LFW benchmark.  So jittering makes the whole
     // procedure a little more accurate but makes face descriptor calculation slower.
-    return true;
+    return 1;
 }
 
 // ----------------------------------------------------------------------------------------

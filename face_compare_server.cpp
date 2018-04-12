@@ -33,6 +33,45 @@ void write_file(const string& name, const string& content)
 
 class web_server : public server_http
 {
+	void on_connect (
+            std::istream& in,
+            std::ostream& out,
+            const std::string& foreign_ip,
+            const std::string& local_ip,
+            unsigned short foreign_port,
+            unsigned short local_port,
+            uint64
+    )
+	{
+        ostringstream sout;
+        outgoing_things outgoing;
+        outgoing.headers["content-type"] = "application/json;charset=utf-8";
+        try
+        {
+            incoming_things incoming(foreign_ip, local_ip, foreign_port, local_port);
+            parse_http_request(in, incoming, get_max_content_length());
+            read_body(in, incoming);
+            const std::string& result = on_request(incoming, outgoing);
+            write_http_response(out, outgoing, result);
+        }
+        catch (http_parse_error& e)
+        {
+            xlog << LERROR << "Error processing request from: " << foreign_ip << " - " << e.what();
+            //write_http_response(out, e);
+            sout << "{\"message\":\"" << e.what()
+                <<"\",\"data\":null,\"extra\":null,\"code\":\"IMAGE_INVALID\"}";
+            write_http_response(out, outgoing, sout.str());
+        }
+        catch (std::exception& e)
+        {
+            xlog << LERROR << "Error processing request from: " << foreign_ip << " - " << e.what();
+            //write_http_response(out, e);
+            sout << "{\"message\":\"" << e.what()
+                <<"\",\"data\":null,\"extra\":null,\"code\":\"IMAGE_INVALID\"}";
+            write_http_response(out, outgoing, sout.str());
+        }
+	}
+
     const std::string on_request ( 
         const incoming_things& incoming,
         outgoing_things& outgoing
@@ -41,58 +80,48 @@ class web_server : public server_http
         xlog << LINFO << incoming.foreign_ip << "\t"
             << incoming.request_type << "\t"
             << incoming.path;
+        if (incoming.path.find("/api/v1/facecompare") != 0)
+        {
+            xlog << LERROR << "invalid request";
+            return "{\"code\":\"INVALID_REQUEST\"}";
+        }
 
+        string img1 = c(incoming.queries["img1"]);
+        string img2 = c(incoming.queries["img2"]);
+        string name1 = dir_ + directory::get_separator() + md5(img1);
+        string name2 = dir_ + directory::get_separator() + md5(img2);
+        if (!file_exists(name1))
+        {
+            write_file(name1, img1);
+        }
+        if (!file_exists(name2))
+        {
+            write_file(name2, img2);
+        }
+
+        matrix<float,0,1> m1, m2;
+        string msg;
+        int ret;
         ostringstream sout;
-
-        if (incoming.path == "/api/v1/facecompare")
+        ret = feature_util_->extract(name1, m1, msg);
+        if (ret != 1)
         {
-            string img1 = c(incoming.queries["img1"]);
-            string img2 = c(incoming.queries["img2"]);
-            string name1 = dir_ + directory::get_separator() + md5(img1);
-            string name2 = dir_ + directory::get_separator() + md5(img2);
-            sout << "md5(img1)=" << name1 << endl;
-            sout << "md5(img2)=" << name2 << endl;
-            if (!file_exists(name1))
-            {
-                write_file(name1, img1);
-            }
-            if (!file_exists(name2))
-            {
-                write_file(name2, img2);
-            }
-
-            matrix<float,0,1> m1, m2;
-            string msg;
-            bool ret;
-            ret = feature_util_->extract(name1, m1, msg);
-            if (!ret)
-            {
-                sout << "error: " << msg << endl;
-            }
-            else
-            {
-                sout << trans(m1) << endl;
-            }
-            ret = feature_util_->extract(name2, m2, msg);
-            if (!ret)
-            {
-                sout << "error: " << msg << endl;
-            }
-            else
-            {
-                sout << trans(m2) << endl;
-                cosine_distance d;
-                sout << d(m1, m2) << endl;
-            }
-           
-            sout << msg << endl;
+            sout << "{\"message\":\"" << msg
+                <<"\",\"data\":null,\"extra\":null,\"code\":\"IMAGE_FACE_COUNT\"}";
+            return sout.str();
         }
-        else
+        ret = feature_util_->extract(name2, m2, msg);
+        if (ret != 1)
         {
-            sout << incoming.path << endl;
+            sout << "{\"message\":\"" << msg
+                <<"\",\"data\":null,\"extra\":null,\"code\":\"IMAGE_FACE_COUNT\"}";
+            return sout.str();
         }
-        //sout << "incoming.body: " << incoming.body << endl;
-       
+
+        cosine_distance d;
+        double s = (1 - d(m1, m2)) * 100;
+        sout << "{\"message\":\"OK\",\"data\":{\"similarity\":" << s
+            << "},\"extra\":null,\"code\":\"SUCCESS\"}";
         return sout.str();
     }
 
@@ -118,13 +147,13 @@ int main(int argc, char** argv)
     try
     {
         command_line_parser parser;
-        parser.add_option("dir","dir for saving image files.",1);
-        parser.add_option("model","dir for dnn face model files.",1);
-        parser.add_option("port","listen port.",1);
-        parser.add_option("h","Display this help message.");
+        parser.add_option("dir", "dir for saving image files.", 1);
+        parser.add_option("model", "dir for dnn face model files.", 1);
+        parser.add_option("host", "listen ip.", 1);
+        parser.add_option("port", "listen port.", 1);
+        parser.add_option("h", "Display this help message.");
 
         parser.parse(argc,argv);
-
         const char* one_time_opts[] = {"dir", "model"};
         parser.check_one_time_options(one_time_opts);
         parser.check_option_arg_range("port", 80, 65535);
@@ -156,9 +185,11 @@ int main(int argc, char** argv)
             return 0;
         }
         int port = get_option(parser,"port", 5000);
+        string ip = get_option(parser,"host", "127.0.0.1");
 
         web_server our_web_server(dir, model_dir);
         our_web_server.set_listening_port(port);
+        our_web_server.set_listening_ip(ip);
         xlog << LINFO << "server listen on "
             << our_web_server.get_listening_ip() << ":" << port;
         our_web_server.start();
