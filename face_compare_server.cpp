@@ -118,7 +118,8 @@ class web_server : public server_http
             return sout.str();
         }
 
-        cosine_distance d;
+        //cosine_distance d;
+        squared_euclidean_distance d;
         double s = (1 - d(m1, m2)) * 100;
         sout << "{\"message\":\"OK\",\"data\":{\"similarity\":" << s
             << "},\"extra\":null,\"code\":\"SUCCESS\"}";
