@@ -1,8 +1,17 @@
 # Face Comparison Service
 
-## A http restful service
+## Introduction
 
-Based on dlib
+A http restful face comparison service based on dlib.
+
+## How to build
+
+```sh
+git clone https://github.com/liuzl/facerecognition
+cd facerecognition
+mkdir build && cd build
+cmake .. && cmake --build .
+```
 
 ## How to make a call
 
