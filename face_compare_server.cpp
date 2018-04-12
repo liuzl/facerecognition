@@ -18,6 +18,7 @@
 #include <dlib/dir_nav.h>
 #include <dlib/cmd_line_parser.h>
 #include <dlib/misc_api.h>
+#include <dlib/graph_utils.h>
 
 #include "dnn_face_feature.h"
 
@@ -67,8 +68,28 @@ class web_server : public server_http
 
             matrix<float,0,1> m1, m2;
             string msg;
-            feature_util_->extract(name1, m1, msg);
-            sout << trans(m1) << endl;
+            bool ret;
+            ret = feature_util_->extract(name1, m1, msg);
+            if (!ret)
+            {
+                sout << "error: " << msg << endl;
+            }
+            else
+            {
+                sout << trans(m1) << endl;
+            }
+            ret = feature_util_->extract(name2, m2, msg);
+            if (!ret)
+            {
+                sout << "error: " << msg << endl;
+            }
+            else
+            {
+                sout << trans(m2) << endl;
+                cosine_distance d;
+                sout << d(m1, m2) << endl;
+            }
+           
             sout << msg << endl;
         }
         else
