@@ -29,3 +29,14 @@ echo "img1=$img1&img2=$img2" > postdata
 curl -d @postdata -X POST http://localhost:5000/api/v1/facecompare
 rm postdata
 ```
+
+```json
+{
+  "message": "OK",
+  "data": {
+    "similarity": 90.5134
+  },
+  "extra": null,
+  "code": "SUCCESS"
+}
+```
