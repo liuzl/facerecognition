@@ -16,6 +16,8 @@ using namespace std;
 
 logger xlog("facecompare");
 
+const size_t max_size = 2*1024*1024;
+
 string c(const string& b)
 {
     base64 base64_coder;
@@ -88,6 +90,11 @@ class web_server : public server_http
 
         string img1 = c(incoming.queries["img1"]);
         string img2 = c(incoming.queries["img2"]);
+        if (img1.size() > max_size || img2.size() > max_size)
+        {
+            xlog << LERROR << "image larger than 2M";
+            return "{\"message\":\"image larger than 2M,\",\"code\":\"IMAGE_INVALID_SIZE\"}";
+        }
         string name1 = dir_ + directory::get_separator() + md5(img1);
         string name2 = dir_ + directory::get_separator() + md5(img2);
         if (!file_exists(name1))
