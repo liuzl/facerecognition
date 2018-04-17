@@ -18,7 +18,7 @@ logger xlog("facecompare");
 
 const size_t max_size = 2*1024*1024;
 
-string c(const string& b)
+string decode(const string& b)
 {
     base64 base64_coder;
     ostringstream sout;
@@ -60,7 +60,7 @@ class web_server : public server_http
         {
             xlog << LERROR << "Error processing request from: " << foreign_ip << " - " << e.what();
             //write_http_response(out, e);
-            sout << "{\"message\":\"" << e.what()
+            sout << "{\"message\":\"" << "input is invalid" //e.what()
                 <<"\",\"data\":null,\"extra\":null,\"code\":\"IMAGE_INVALID\"}";
             write_http_response(out, outgoing, sout.str());
         }
@@ -68,7 +68,7 @@ class web_server : public server_http
         {
             xlog << LERROR << "Error processing request from: " << foreign_ip << " - " << e.what();
             //write_http_response(out, e);
-            sout << "{\"message\":\"" << e.what()
+            sout << "{\"message\":\"" << "input is invalid" //e.what()
                 <<"\",\"data\":null,\"extra\":null,\"code\":\"IMAGE_INVALID\"}";
             write_http_response(out, outgoing, sout.str());
         }
@@ -88,8 +88,8 @@ class web_server : public server_http
             return "{\"code\":\"INVALID_REQUEST\"}";
         }
 
-        string img1 = c(incoming.queries["img1"]);
-        string img2 = c(incoming.queries["img2"]);
+        string img1 = decode(incoming.queries["img1"]);
+        string img2 = decode(incoming.queries["img2"]);
         if (img1.size() > max_size || img2.size() > max_size)
         {
             xlog << LERROR << "image larger than 2M";
