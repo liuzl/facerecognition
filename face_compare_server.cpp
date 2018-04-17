@@ -46,19 +46,30 @@ class web_server : public server_http
     )
 	{
         ostringstream sout;
+        std::shared_ptr<incoming_things> incoming;
         outgoing_things outgoing;
         outgoing.headers["content-type"] = "application/json;charset=utf-8";
         try
         {
-            incoming_things incoming(foreign_ip, local_ip, foreign_port, local_port);
-            parse_http_request(in, incoming, get_max_content_length());
-            read_body(in, incoming);
-            const std::string& result = on_request(incoming, outgoing);
+            //incoming_things incoming(foreign_ip, local_ip, foreign_port, local_port);
+            incoming = std::make_shared<incoming_things>(foreign_ip, local_ip, foreign_port, local_port);
+            parse_http_request(in, *incoming, get_max_content_length());
+            read_body(in, *incoming);
+            const std::string& result = on_request(*incoming, outgoing);
             write_http_response(out, outgoing, result);
         }
         catch (http_parse_error& e)
         {
-            xlog << LERROR << "Error processing request from: " << foreign_ip << " - " << e.what();
+            if (incoming != nullptr)
+            {
+                xlog << LERROR << "error: [path:" << incoming->path <<
+                    " from:" << foreign_ip << " err:" << e.what() << "]";
+            }
+            else
+            {
+                xlog << LERROR << "error: [from:" << foreign_ip
+                    << " err:" << e.what() << "]";
+            }
             //write_http_response(out, e);
             sout << "{\"message\":\"" << "input is invalid" //e.what()
                 <<"\",\"data\":null,\"extra\":null,\"code\":\"IMAGE_INVALID\"}";
@@ -66,7 +77,16 @@ class web_server : public server_http
         }
         catch (std::exception& e)
         {
-            xlog << LERROR << "Error processing request from: " << foreign_ip << " - " << e.what();
+            if (incoming != nullptr)
+            {
+                xlog << LERROR << "error: [path:" << incoming->path <<
+                    " from:" << foreign_ip << " err:" << e.what() << "]";
+            }
+            else
+            {
+                xlog << LERROR << "error: [from:" << foreign_ip
+                    << " err:" << e.what() << "]";
+            }
             //write_http_response(out, e);
             sout << "{\"message\":\"" << "input is invalid" //e.what()
                 <<"\",\"data\":null,\"extra\":null,\"code\":\"IMAGE_INVALID\"}";
