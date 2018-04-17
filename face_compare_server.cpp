@@ -95,8 +95,9 @@ class web_server : public server_http
             xlog << LERROR << "image larger than 2M";
             return "{\"message\":\"image larger than 2M,\",\"code\":\"IMAGE_INVALID_SIZE\"}";
         }
-        string name1 = dir_ + directory::get_separator() + md5(img1);
-        string name2 = dir_ + directory::get_separator() + md5(img2);
+        string md1 = md5(img1), md2 = md5(img2);
+        string name1 = dir_ + directory::get_separator() + md1;
+        string name2 = dir_ + directory::get_separator() + md2;
         if (!file_exists(name1))
         {
             write_file(name1, img1);
@@ -106,6 +107,8 @@ class web_server : public server_http
             write_file(name2, img2);
         }
 
+        string extra = "\"" + md1 + "," + md2 + "\"";
+
         matrix<float,0,1> m1, m2;
         string msg;
         int ret;
@@ -114,14 +117,16 @@ class web_server : public server_http
         if (ret != 1)
         {
             sout << "{\"message\":\"" << msg
-                <<"\",\"data\":null,\"extra\":null,\"code\":\"IMAGE_FACE_COUNT\"}";
+                <<"\",\"data\":null,\"extra\":" << extra
+                << ",\"code\":\"IMAGE_FACE_COUNT\"}";
             return sout.str();
         }
         ret = feature_util_->extract(name2, m2, msg);
         if (ret != 1)
         {
             sout << "{\"message\":\"" << msg
-                <<"\",\"data\":null,\"extra\":null,\"code\":\"IMAGE_FACE_COUNT\"}";
+                <<"\",\"data\":null,\"extra\":" << extra
+                << ",\"code\":\"IMAGE_FACE_COUNT\"}";
             return sout.str();
         }
 
@@ -129,7 +134,8 @@ class web_server : public server_http
         squared_euclidean_distance d;
         double s = (1 - d(m1, m2)) * 100;
         sout << "{\"message\":\"OK\",\"data\":{\"similarity\":" << s
-            << "},\"extra\":null,\"code\":\"SUCCESS\"}";
+            << "},\"extra\":" << extra
+            << ",\"code\":\"SUCCESS\"}";
         return sout.str();
     }
 
